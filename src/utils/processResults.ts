@@ -1,5 +1,3 @@
-import * as core from "@actions/core";
-import { SUMMARY_ENV_VAR } from "@actions/core/lib/summary";
 import { Suite } from "@playwright/test/reporter";
 import { existsSync, unlinkSync, writeFileSync } from "fs";
 import { basename, join } from "path";
@@ -16,36 +14,32 @@ export const processResults = async (
   suite: Suite | undefined,
   options: GitHubActionOptions
 ) => {
-  if (process.env.NODE_ENV === "development") {
-    const summaryFile = join(__dirname, "../../summary.html");
-    if (existsSync(summaryFile)) {
-      unlinkSync(summaryFile);
-    }
-    writeFileSync(summaryFile, "", "utf-8");
-    process.env[SUMMARY_ENV_VAR] = summaryFile;
-    process.env.GITHUB_ACTIONS = "true";
-  }
-
   if (process.env.GITHUB_ACTIONS && suite) {
     const os = process.platform;
-    const summary = core.summary;
+
+    // Generate a unique summary file path using matrix.shardIndex
+    const shardIndex = process.env.SHARD_INDEX || "default";
+    const summaryFilePath = join(
+      process.cwd(),
+      `playwright-summary-${shardIndex}.md`
+    );
+
+    if (existsSync(summaryFilePath)) {
+      unlinkSync(summaryFilePath);
+    }
+
+    let summaryContent = "";
 
     const summaryTitle = getSummaryTitle(options.title);
     if (summaryTitle) {
-      summary.addHeading(summaryTitle, 1);
+      summaryContent += `# ${summaryTitle}\n\n`;
     }
-    console.log(summaryTitle);
 
     const headerText = getSummaryDetails(suite);
-    summary.addRaw(headerText.join(` &nbsp;|&nbsp; `));
+    summaryContent += headerText.join(` &nbsp;|&nbsp; `) + "\n\n";
 
-    // if (options.useDetails) {
-    //   summary.addSeparator();
-    // }
-
-    for (const crntSuite of suite?.suites) {
+    for (const crntSuite of suite.suites) {
       const project = crntSuite.project();
-
       const tests = getTestsPerFile(crntSuite);
 
       for (const filePath of Object.keys(tests)) {
@@ -60,17 +54,14 @@ export const processResults = async (
             options.includeResults as DisplayLevel[]
           );
 
-          if (!content) {
-            continue;
+          if (content) {
+            const testStatusIcon = getSuiteStatusIcon(tests[filePath]);
+            summaryContent += `<details><summary>${testStatusIcon} ${getTestHeading(
+              fileName,
+              os,
+              project
+            )}</summary>\n\n${content}\n\n</details>\n\n`;
           }
-
-          // Check if there are any failed tests
-          const testStatusIcon = getSuiteStatusIcon(tests[filePath]);
-
-          summary.addDetails(
-            `${testStatusIcon} ${getTestHeading(fileName, os, project)}`,
-            content
-          );
         } else {
           const tableRows = await getTableRows(
             tests[filePath],
@@ -81,13 +72,16 @@ export const processResults = async (
           );
 
           if (tableRows.length !== 0) {
-            summary.addHeading(getTestHeading(fileName, os, project), 2);
-            summary.addTable(tableRows);
+            summaryContent += `## ${getTestHeading(fileName, os, project)}\n\n`;
+            summaryContent +=
+              "| Test | Result | Details |\n| --- | --- | --- |\n";
+            summaryContent +=
+              tableRows.map((row) => row.join(" | ")).join("\n") + "\n\n";
           }
         }
       }
     }
 
-    await summary.write();
+    writeFileSync(summaryFilePath, summaryContent, "utf-8");
   }
 };

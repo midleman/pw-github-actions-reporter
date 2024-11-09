@@ -83,3 +83,27 @@ jobs:
       - name: Run Playwright tests
         run: npx playwright test --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
         continue-on-error: true
+
+      - name: Upload summary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-summary-${{ matrix.shardIndex }}
+          path: playwright-summary-${{ matrix.shardIndex }}.md
+
+  e2e-report:
+    runs-on: ubuntu-latest
+    needs: [testing-matrix]
+    steps:
+      - name: Download all summaries
+        uses: actions/download-artifact@v4
+        with:
+          name: playwright-summary-*
+          path: combined-summaries
+
+      - name: Combine summaries
+        run: |
+          cat combined-summaries/playwright-summary-shard-*.md > combined-summaries/combined-summary.md
+
+      - name: Post combined summary to GitHub
+        run: |
+          cat combined-summaries/combined-summary.md >> $GITHUB_STEP_SUMMARY
