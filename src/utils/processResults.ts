@@ -1,8 +1,8 @@
 import * as core from "@actions/core";
 import { SUMMARY_ENV_VAR } from "@actions/core/lib/summary";
 import { Suite } from "@playwright/test/reporter";
-import { existsSync, unlinkSync, writeFileSync } from "fs";
-import { basename, join } from "path";
+import { existsSync, readFileSync, writeFileSync, unlinkSync } from "fs";
+import { join } from "path";
 import { getHtmlTable } from "./getHtmlTable";
 import { getSuiteStatusIcon } from "./getSuiteStatusIcon";
 import { getTableRows } from "./getTableRows";
@@ -21,7 +21,6 @@ export const processResults = async (
     if (existsSync(summaryFile)) {
       unlinkSync(summaryFile);
     }
-    writeFileSync(summaryFile, "", "utf-8");
     process.env[SUMMARY_ENV_VAR] = summaryFile;
     process.env.GITHUB_ACTIONS = "true";
   }
@@ -34,22 +33,17 @@ export const processResults = async (
     if (summaryTitle) {
       summary.addHeading(summaryTitle, 1);
     }
-    console.log(summaryTitle);
 
     const headerText = getSummaryDetails(suite);
     summary.addRaw(headerText.join(` &nbsp;|&nbsp; `));
 
-    // if (options.useDetails) {
-    //   summary.addSeparator();
-    // }
-
-    for (const crntSuite of suite?.suites) {
+    for (const crntSuite of suite.suites) {
       const project = crntSuite.project();
 
       const tests = getTestsPerFile(crntSuite);
 
       for (const filePath of Object.keys(tests)) {
-        const fileName = basename(filePath);
+        const fileName = getTestHeading(filePath, os, project);
 
         if (options.useDetails) {
           const content = await getHtmlTable(
@@ -60,17 +54,10 @@ export const processResults = async (
             options.includeResults as DisplayLevel[]
           );
 
-          if (!content) {
-            continue;
+          if (content) {
+            const testStatusIcon = getSuiteStatusIcon(tests[filePath]);
+            summary.addDetails(`${testStatusIcon} ${fileName}`, content);
           }
-
-          // Check if there are any failed tests
-          const testStatusIcon = getSuiteStatusIcon(tests[filePath]);
-
-          summary.addDetails(
-            `${testStatusIcon} ${getTestHeading(fileName, os, project)}`,
-            content
-          );
         } else {
           const tableRows = await getTableRows(
             tests[filePath],
@@ -81,13 +68,29 @@ export const processResults = async (
           );
 
           if (tableRows.length !== 0) {
-            summary.addHeading(getTestHeading(fileName, os, project), 2);
+            summary.addHeading(fileName, 2);
             summary.addTable(tableRows);
           }
         }
       }
     }
 
-    await summary.write();
+    // Get the summary file path
+    const summaryFilePath = process.env[SUMMARY_ENV_VAR] || "";
+
+    // Read the existing content (if any)
+    const currentContent = existsSync(summaryFilePath)
+      ? readFileSync(summaryFilePath, "utf-8")
+      : "";
+
+    // Write the new content, appending to existing content
+    writeFileSync(
+      summaryFilePath,
+      currentContent + summary.stringify(),
+      "utf-8"
+    );
+
+    // Clear the summary to avoid re-adding the same content
+    summary.clear();
   }
 };
