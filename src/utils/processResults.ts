@@ -81,7 +81,7 @@ export const processResults = async (
         }
       }
     }
-
+    console.log("****", summaryFilePath);
     writeFileSync(summaryFilePath, summaryContent, "utf-8");
   }
 };

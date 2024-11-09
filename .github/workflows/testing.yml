@@ -88,7 +88,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-summary-${{ matrix.shardIndex }}
-          path: playwright-summary-${{ matrix.shardIndex }}.md
+          path: playwright-summary-*
 
   e2e-report:
     runs-on: ubuntu-latest
