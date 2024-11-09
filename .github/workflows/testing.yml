@@ -98,12 +98,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: playwright-summary-*
-          path: combined-summaries
+          path: playwright-summaries
+          merge-multiple: true
 
       - name: Combine summaries
         run: |
-          cat combined-summaries/playwright-summary-shard-*.md > combined-summaries/combined-summary.md
+          cat playwright-summaries/playwright-summary-shard-*.md > playwright-summaries/combined-summary.md
 
       - name: Post combined summary to GitHub
         run: |
-          cat combined-summaries/combined-summary.md >> $GITHUB_STEP_SUMMARY
+          cat playwright-summaries/combined-summary.md >> $GITHUB_STEP_SUMMARY

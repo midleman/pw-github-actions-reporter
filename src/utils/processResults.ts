@@ -4,8 +4,6 @@ import { basename, join } from "path";
 import { getHtmlTable } from "./getHtmlTable";
 import { getSuiteStatusIcon } from "./getSuiteStatusIcon";
 import { getTableRows } from "./getTableRows";
-import { getSummaryTitle } from "./getSummaryTitle";
-import { getSummaryDetails } from "./getSummaryDetails";
 import { getTestsPerFile } from "./getTestsPerFile";
 import { getTestHeading } from "./getTestHeading";
 import { DisplayLevel, GitHubActionOptions } from "../models";
@@ -17,7 +15,7 @@ export const processResults = async (
   if (process.env.GITHUB_ACTIONS && suite) {
     const os = process.platform;
 
-    // Generate a unique summary file path using matrix.shardIndex
+    // Unique file path per shard using matrix.shardIndex
     const shardIndex = process.env.SHARD_INDEX || "default";
     const summaryFilePath = join(
       process.cwd(),
@@ -30,14 +28,9 @@ export const processResults = async (
 
     let summaryContent = "";
 
-    const summaryTitle = getSummaryTitle(options.title);
-    if (summaryTitle) {
-      summaryContent += `# ${summaryTitle}\n\n`;
-    }
+    // Skip header/title here; it will be added in the final job
 
-    const headerText = getSummaryDetails(suite);
-    summaryContent += headerText.join(` &nbsp;|&nbsp; `) + "\n\n";
-
+    // Collect test details only
     for (const crntSuite of suite.suites) {
       const project = crntSuite.project();
       const tests = getTestsPerFile(crntSuite);
@@ -81,7 +74,8 @@ export const processResults = async (
         }
       }
     }
-    console.log("****", summaryFilePath);
+
+    // Write content without header to individual summary file
     writeFileSync(summaryFilePath, summaryContent, "utf-8");
   }
 };
