@@ -16,6 +16,16 @@ const config: PlaywrightTestConfig<{}, {}> = {
     [
       "./src/index.ts",
       <GitHubActionOptions>{
+        title: "",
+        useDetails: true,
+        showError: true,
+        showAnnotations: false,
+        includeResults: ["fail", "flaky"],
+      },
+    ],
+    [
+      "./src/index.ts",
+      <GitHubActionOptions>{
         title: "Reporter (details: false, report: fail, flaky, skipped)",
         useDetails: false,
         showError: true,
