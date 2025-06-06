@@ -21,7 +21,6 @@ class GitHubAction implements Reporter {
       quiet: false,
     }
   ) {
-    console.log(`Using GitHub Actions reporter`);
 
     // Set default options
     if (typeof options.showAnnotations === "undefined") {
