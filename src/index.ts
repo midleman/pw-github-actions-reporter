@@ -16,15 +16,31 @@ class GitHubAction implements Reporter {
 
   constructor(
     private options: GitHubActionOptions = {
-      showAnnotations: true,
+      title: '',
+      useDetails: true,
+      showError: true,
+      showAnnotations: false,
       showTags: true,
       quiet: false,
+      includeResults: ['fail', 'flaky']
     }
   ) {
 
     // Set default options
+    if (typeof options.title === "undefined") {
+      this.options.title = '';
+    }
+
+    if (typeof options.useDetails === "undefined") {
+      this.options.useDetails = true;
+    }
+
+    if (typeof options.showError === "undefined") {
+      this.options.showError = true;
+    }
+
     if (typeof options.showAnnotations === "undefined") {
-      this.options.showAnnotations = true;
+      this.options.showAnnotations = false;
     }
 
     if (typeof options.showTags === "undefined") {
@@ -32,7 +48,7 @@ class GitHubAction implements Reporter {
     }
 
     if (typeof options.includeResults === "undefined") {
-      this.options.includeResults = ["fail", "flaky", "pass", "skipped"];
+      this.options.includeResults = ['fail', 'flaky'];
     }
 
     if (process.env.NODE_ENV === "development") {
